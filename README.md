@@ -30,3 +30,6 @@ Voice cloning is no longer a theoretical threat; it is an active vector for soci
 ---
 *Author: [Aren Koprulu] | Target: Oxford University Portfolio*
 
+Updates:
+
+28/12/25 - Updated main.py, initial use of Librosa after research, visualisation and frontend using streamlit.
