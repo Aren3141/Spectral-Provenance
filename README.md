@@ -28,8 +28,6 @@ Voice cloning is no longer a theoretical threat; it is an active vector for soci
 - [ ] **Phase 4:** Inference engine & Streamlit Web UI (The Product).
 
 ---
-*Author: [Aren Koprulu] | Target: Oxford University Portfolio*
+*Author: [Aren Koprulu]*
 
-Updates:
 
-28/12/25 - Updated main.py, initial use of Librosa after research, visualisation and frontend using streamlit.
