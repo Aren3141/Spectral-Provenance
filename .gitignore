@@ -1,0 +1,13 @@
+# .gitignore
+
+# 1. Python Junk
+__pycache__/
+*.py[cod]
+.venv/
+
+# 2. System Junk
+.DS_Store
+
+# 3. THE DATASET (The Firewall)
+# This prevents GitHub from seeing anything inside the data folder
+data/
