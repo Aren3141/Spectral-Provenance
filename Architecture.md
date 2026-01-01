@@ -37,3 +37,23 @@ To identify AI-generated artifacts, we move past the Time Domain into the Freque
 * **Deepfake Detection Utility:** This visualization allows us to spot:
     * **High-Frequency Cutoffs:** Generative models often fail to produce noise above certain thresholds (e.g., 16kHz), leaving these black gaps in the spectrum.
     * **Spectral Texture:** Smoothness or checkerboard patterns that differ from biological noise.
+
+## 4. The Data Pipeline (Phase 2: Ingestion)
+
+To train a Convolutional Neural Network (CNN), we must convert our problem from the **Audio Domain** (1D Signals) to the **Visual Domain** (2D Images).
+
+### The Processor (`src/processor.py`)
+This script handles the mass-transmutation of the ASVspoof 2019 dataset.
+
+1.  **Protocol Mapping:** It reads the `ASVspoof2019.LA.cm.train.trn.txt` file to determine the Label for every file.
+2.  **Sorting:** It automatically sorts generated images into `data/processed/bonafide` (Real) and `data/processed/spoof` (Fake).
+3.  **Image Generation:**
+    * **Input:** `.flac` audio file.
+    * **Process:** STFT $\rightarrow$ Mel-Scale $\rightarrow$ Decibel Conversion.
+    * **Output:** `.png` image (128x128 approx).
+
+### Critical Decision: The "Naked" Spectrogram
+* **Code:** `plt.axis('off')`, `plt.tight_layout(pad=0)`
+* **Why:** Standard `matplotlib` charts include white borders, axes, and labels. These are "noise" to a Neural Network.
+* **Result:** The generated images contain *only* the data we need. This maximizes the "Signal-to-Noise Ratio" for the AI, ensuring it learns from the audio artifacts, not the font size of the axis labels. We want to minimise any inaccuracies and potential confusion.
+
