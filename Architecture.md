@@ -57,3 +57,14 @@ This script handles the mass-transmutation of the ASVspoof 2019 dataset.
 * **Why:** Standard `matplotlib` charts include white borders, axes, and labels. These are "noise" to a Neural Network.
 * **Result:** The generated images contain *only* the data we need. This maximizes the "Signal-to-Noise Ratio" for the AI, ensuring it learns from the audio artifacts, not the font size of the axis labels. We want to minimise any inaccuracies and potential confusion.
 
+## The Architecture (Phase 3: The Brain)
+* **Input:** 128x128 Pixel Mel-Spectrograms (Grayscale, 1 Channel).
+* **The "SpectrogramCNN" Model:**
+    1.  **Conv Block 1:** 32 Filters (3x3 Kernel) $\rightarrow$ ReLU $\rightarrow$ MaxPool (2x2).
+    2.  **Conv Block 2:** 64 Filters (3x3 Kernel) $\rightarrow$ ReLU $\rightarrow$ MaxPool (2x2).
+    3.  **Conv Block 3:** 128 Filters (3x3 Kernel) $\rightarrow$ ReLU $\rightarrow$ MaxPool (2x2).
+    4.  **Flattening:** Convert 3D feature maps to 1D vector.
+    5.  **Dense Layers:** 128 Neurons $\rightarrow$ Output Node (Sigmoid/Logits).
+* **Why this shape?**
+    * Standard "Funnel" architecture: Image size decreases (128 $\rightarrow$ 64 $\rightarrow$ 32 $\rightarrow$ 16), while depth increases (1 $\rightarrow$ 32 $\rightarrow$ 64 $\rightarrow$ 128). This forces the model to learn increasingly abstract features.
+
