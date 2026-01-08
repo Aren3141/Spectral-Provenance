@@ -31,3 +31,13 @@
     - *Justification:* The Neural Network requires pure signal data. Human-readable labels are noise that could confuse the Model.
 - **Outcome:** Successfully generated a dataset of labeled Spectrogram images, sorted into `bonafide` (Real) and `spoof` (Fake).
 - **Next Steps:** Architecting the Convolutional Neural Network (CNN) in `src/model.py`.
+
+## Entry 4: The Brain Initialization (Jan 08, 2026)
+**Status:** Phase 3 (Model Implementation)
+- **Objective:** Build the Convolutional Neural Network architecture.
+- **Constraint:** Model must run efficiently on M3 MacBook Air using MPS without consuming excessive RAM.
+- **Architecture Plan:**
+    - Input: 128x128x1 (Grayscale Mel-Spectrograms).
+    - Layers: 2 or 3 Convolutional blocks (Conv2d + ReLU + MaxPool).
+    - Classifier: Fully Connected (Linear) layers for binary classification (Bonafide vs Spoof).
+- **Action Item:** Implement `SpectrogramCNN` class in `src/model.py`.
