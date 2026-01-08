@@ -64,7 +64,7 @@ This script handles the mass-transmutation of the ASVspoof 2019 dataset.
     2.  **Conv Block 2:** 64 Filters (3x3 Kernel) $\rightarrow$ ReLU $\rightarrow$ MaxPool (2x2).
     3.  **Conv Block 3:** 128 Filters (3x3 Kernel) $\rightarrow$ ReLU $\rightarrow$ MaxPool (2x2).
     4.  **Flattening:** Convert 3D feature maps to 1D vector.
-    5.  **Dense Layers:** 128 Neurons $\rightarrow$ Output Node (Sigmoid/Logits).
+    5.  **Dense Layers:** 128 Neurons $\rightarrow$ Output Node.
 * **Why this shape?**
     * Standard "Funnel" architecture: Image size decreases (128 $\rightarrow$ 64 $\rightarrow$ 32 $\rightarrow$ 16), while depth increases (1 $\rightarrow$ 32 $\rightarrow$ 64 $\rightarrow$ 128). This forces the model to learn increasingly abstract features.
 
