@@ -41,3 +41,13 @@
     - Layers: 2 or 3 Convolutional blocks (Conv2d + ReLU + MaxPool).
     - Classifier: Fully Connected (Linear) layers for binary classification (Bonafide vs Spoof).
 - **Action Item:** Implement `SpectrogramCNN` class in `src/model.py`.
+
+## Entry 5: The Architecture Definition (Jan 11, 2026)
+**Status:** Phase 3 (Model Locked)
+- **Objective:** Define the layers of the Neural Network in `src/model.py`.
+- **Architecture Choice:** 3-Block CNN.
+    - **Why:** Deepfakes in the logical access dataset often have specific texture artifacts. A CNN is the standard for recognising these textures.
+    - **Dimensions:** Input (128x128) -> Conv1/Pool (64x64) -> Conv2/Pool (32x32) -> Conv3/Pool (16x16).
+    - **Flattening:** The resulting feature map (128 channels * 16 * 16) results in 32,768 features entering the dense layer.
+- **Hardware Check:** Validated input/output shapes using `torch.randn`. The model suits the 16GB on a Macbook M3 Air.
+- **Next Steps:** Create `src/train.py` to construct the Training Loop (Loss Calculation & Backpropagation).
