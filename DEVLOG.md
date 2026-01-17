@@ -60,3 +60,15 @@
     - **Epoch 10:** 99.49% Accuracy (Refined texture analysis).
 - **Performance:** M3 Air (MPS) handled the load efficiently (~60s per epoch dropping from ~140s).
 - **Artifact:** Model saved as `models/spectral_cnn_v1.pth`.
+
+## Entry 7: The Interface Deployment (Jan 17, 2026)
+**Status:** Phase 5 (Operational)
+- **Objective:** Deploy the trained model to a user-facing dashboard.
+- **Implementation:** Built a Streamlit interface in `main.py`.
+- **Pipeline:**
+    1.  User uploads Audio.
+    2.  System preprocesses to Mel-Spectrogram (matching Training Config).
+    3.  Model Inference (MPS Acceleration).
+    4.  Output: Classification + Confidence Score.
+- **Outcome:** **SUCCESS.** The system runs in real-time on the M3 Air.
+- **Next Steps:** Final Evaluation and Project Write-up.
