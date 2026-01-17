@@ -8,6 +8,10 @@ __pycache__/
 # 2. System Junk
 .DS_Store
 
-# 3. THE DATASET (The Firewall)
+# 3. THE DATASET
 # This prevents GitHub from seeing anything inside the data folder
 data/
+
+# Model Artifacts
+models/
+*.pth

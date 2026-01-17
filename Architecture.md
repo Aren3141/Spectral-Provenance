@@ -79,3 +79,10 @@ This script handles the mass-transmutation of the ASVspoof 2019 dataset.
         * **FC1 (Dense):** 128 Neurons + ReLU.
         * **Dropout:** 0.5 (Randomly zeroes 50% of neurons to prevent overfitting).
         * **FC2 (Output):** 2 Neurons (Logits for Bonafide vs Spoof).
+
+
+## 4. Training Configuration
+* **Optimizer:** Adam (LR=0.001).
+* **Loss Function:** CrossEntropyLoss.
+* **Input Constraint:** All images resized to **128x128** Grayscale.
+* **Dynamics:** Rapid convergence suggests high separability between real and spoofed audio in the frequency domain.

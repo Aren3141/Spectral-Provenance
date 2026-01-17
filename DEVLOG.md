@@ -51,3 +51,12 @@
     - **Flattening:** The resulting feature map (128 channels * 16 * 16) results in 32,768 features entering the dense layer.
 - **Hardware Check:** Validated input/output shapes using `torch.randn`. The model suits the 16GB on a Macbook M3 Air.
 - **Next Steps:** Create `src/train.py` to construct the Training Loop (Loss Calculation & Backpropagation).
+
+## Entry 6: The Training Run (Jan 17, 2026)
+**Status:** Phase 4 (Training Complete)
+- **Objective:** Train the SpectrogramCNN on the processed dataset.
+- **Outcome:** The model improved accuracy rapidly.
+    - **Epoch 1:** ~89% Accuracy (The model identified the "Black Void" artifacts immediately).
+    - **Epoch 10:** 99.49% Accuracy (Refined texture analysis).
+- **Performance:** M3 Air (MPS) handled the load efficiently (~60s per epoch dropping from ~140s).
+- **Artifact:** Model saved as `models/spectral_cnn_v1.pth`.
