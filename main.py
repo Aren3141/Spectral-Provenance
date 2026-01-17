@@ -10,30 +10,30 @@ import matplotlib.pyplot as plt
 import io
 import os
 
-# Import your actual brain
+# Import the brain
 from src.model import SpectrogramCNN
 
-# --- CONFIGURATION ---
+# CONFIG
 MODEL_PATH = "models/spectral_cnn_v1.pth"
 DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
-# --- PAGE SETUP ---
+# PAGE SETUP
 st.set_page_config(page_title="Spectral-Provenance", page_icon="🕵️", layout="wide")
 
-st.title("🕵️ Spectral-Provenance: Deepfake Audio Detector")
+st.title("Spectral-Provenance: Deepfake Audio Detector")
 st.markdown("""
 **System Status:** Online | **Engine:** SpectrogramCNN (v1) | **Device:** Apple Silicon (MPS)
 """)
 
-# --- LOAD THE BRAIN ---
+# LOAD THE BRAIN
 @st.cache_resource
 def load_model():
     model = SpectrogramCNN()
-    # Load the weights we trained
+    # Load the weights trained
     if os.path.exists(MODEL_PATH):
         model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
         model.to(DEVICE)
-        model.eval() # Set to Evaluation Mode (locks Dropout)
+        model.eval() # Set to eval mode (locks Dropout)
         return model
     else:
         st.error(f"Model not found at {MODEL_PATH}. Did you run train.py?")
@@ -41,26 +41,26 @@ def load_model():
 
 model = load_model()
 
-# --- PREPROCESSING PIPELINE ---
+# PREPROCESSING PIPELINE
 def generate_spectrogram_image(audio_buffer):
-    """
-    Converts audio bytes -> Mel Spectrogram -> PIL Image
-    This mimics exactly how we generated the Training Data.
-    """
-    # 1. Load Audio
+    
+    # Converts audio bytes to Mel Spectrogram to PIL Image
+    # This mimics exactly how we generated the Training Data
+    
+    # Load Audio
     y, sr = librosa.load(audio_buffer, sr=44100) # Force 44.1kHz
     
-    # 2. STFT & Mel Scale
+    # STFT & Mel Scale
     D = librosa.stft(y)
     S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
     
-    # 3. Render to Memory (No Axis, No Labels)
+    # Render to Memory (No Axis, No Labels)
     fig = plt.figure(figsize=(10, 10))
     plt.axis('off')
     librosa.display.specshow(S_db, sr=sr, x_axis='time', y_axis='mel')
     plt.tight_layout(pad=0)
     
-    # 4. Save to Buffer (RAM) instead of Disk
+    # Save to Buffer (RAM) instead of Disk
     buf = io.BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
     plt.close(fig)
@@ -92,7 +92,7 @@ def predict(image, model):
     confidence, predicted_class = torch.max(probabilities, 1)
     return predicted_class.item(), confidence.item(), probabilities[0].tolist()
 
-# --- USER INTERFACE ---
+# USER INTERFACE 
 col1, col2 = st.columns([1, 2])
 
 with col1:
@@ -104,13 +104,13 @@ with col1:
         
         if st.button("Analyze Spectrogram"):
             with st.spinner("Generating Spectral Image..."):
-                # 1. Convert Audio to Image
+                # Convert Audio to Image
                 spec_image = generate_spectrogram_image(uploaded_file)
                 
-                # 2. Run Inference
+                # Run Inference
                 class_idx, conf, probs = predict(spec_image, model)
                 
-                # 3. Display Results
+                # Display Results
                 classes = ['Bonafide (Real)', 'Spoof (Fake)']
                 result_color = "green" if class_idx == 0 else "red"
                 
