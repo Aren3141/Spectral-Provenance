@@ -1,84 +1,134 @@
 import streamlit as st
+import torch
+import torch.nn.functional as F
+from torchvision import transforms
+from PIL import Image
 import numpy as np
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
+import io
+import os
 
-# Page Configuration
-st.set_page_config(page_title="Spectral Provenance", layout="wide")
+# Import your actual brain
+from src.model import SpectrogramCNN
 
-# The Header
-st.title("Spectral-Provenance: Acoustic Analysis Lab")
+# --- CONFIGURATION ---
+MODEL_PATH = "models/spectral_cnn_v1.pth"
+DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+
+# --- PAGE SETUP ---
+st.set_page_config(page_title="Spectral-Provenance", page_icon="🕵️", layout="wide")
+
+st.title("🕵️ Spectral-Provenance: Deepfake Audio Detector")
 st.markdown("""
-**Status:** Phase 1.5 (Frequency Domain Analysis)
-This tool analyzes audio physics. We visualize both the **Time Domain** (Amplitude) and **Frequency Domain** (Spectrogram).
+**System Status:** Online | **Engine:** SpectrogramCNN (v1) | **Device:** Apple Silicon (MPS)
 """)
 
-# The Sidebar
-st.sidebar.header("Data Input")
-uploaded_file = st.sidebar.file_uploader("Upload an Audio Sample (.mp3, .wav)", type=["mp3", "wav"])
+# --- LOAD THE BRAIN ---
+@st.cache_resource
+def load_model():
+    model = SpectrogramCNN()
+    # Load the weights we trained
+    if os.path.exists(MODEL_PATH):
+        model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
+        model.to(DEVICE)
+        model.eval() # Set to Evaluation Mode (locks Dropout)
+        return model
+    else:
+        st.error(f"Model not found at {MODEL_PATH}. Did you run train.py?")
+        return None
 
-# The Main Logic
-if uploaded_file is not None:
-    # 1. Display Audio Player
-    st.sidebar.audio(uploaded_file, format='audio/audio')
+model = load_model()
+
+# --- PREPROCESSING PIPELINE ---
+def generate_spectrogram_image(audio_buffer):
+    """
+    Converts audio bytes -> Mel Spectrogram -> PIL Image
+    This mimics exactly how we generated the Training Data.
+    """
+    # 1. Load Audio
+    y, sr = librosa.load(audio_buffer, sr=44100) # Force 44.1kHz
     
-    # 2. Loading the Audio 
-    with st.spinner('Calculating Waveform Physics...'):
-        # CHANGED: Increased sr to 44100 to see frequencies up to 22kHz
-        # We need this high resolution to spot the "16kHz cut-off" artifacts that usually occur with Deepfakes 
-        y, sr = librosa.load(uploaded_file, sr=44100)
-
-    # 3. Stats Panel
-    st.subheader("Signal Statistics")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Sample Rate (Hz)", f"{sr}")
-    col2.metric("Duration (s)", f"{round(librosa.get_duration(y=y, sr=sr), 2)}")
-    col3.metric("Vector Dimensions", f"{y.shape[0]}")
-
-    # 4. Visualization 1: Time Domain
-    st.divider()
-    st.subheader("1. Time-Domain Analysis (Waveform)")
-    st.markdown("Shows **Amplitude** (Loudness) over **Time**.")
+    # 2. STFT & Mel Scale
+    D = librosa.stft(y)
+    S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
     
-    fig1, ax1 = plt.subplots(figsize=(10, 3))
-    librosa.display.waveshow(y, sr=sr, ax=ax1, color="#1f77b4")
-    ax1.set_title("Raw Audio Waveform")
-    st.pyplot(fig1)
+    # 3. Render to Memory (No Axis, No Labels)
+    fig = plt.figure(figsize=(10, 10))
+    plt.axis('off')
+    librosa.display.specshow(S_db, sr=sr, x_axis='time', y_axis='mel')
+    plt.tight_layout(pad=0)
+    
+    # 4. Save to Buffer (RAM) instead of Disk
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+    buf.seek(0)
+    
+    return Image.open(buf)
 
-    # 5. Visualization 2: Frequency Domain (The New Code)
-    st.divider()
-    st.subheader("2. Frequency-Domain Analysis (Mel-Spectrogram)")
-    st.markdown("""
-    To detect 'robotic' artifacts, we use a **Short-Time Fourier Transform (STFT)**.
-    This heatmap shows **Frequency intensity** over time.
-    """)
+def predict(image, model):
+    """
+    Passes the image through the Neural Network.
+    """
+    # Same transforms as train.py
+    transform_pipeline = transforms.Compose([
+        transforms.Resize((128, 128)),
+        transforms.Grayscale(num_output_channels=1),
+        transforms.ToTensor()
+    ])
+    
+    # Prepare Image
+    img_tensor = transform_pipeline(image).unsqueeze(0) # Add Batch Dimension (1, 1, 128, 128)
+    img_tensor = img_tensor.to(DEVICE)
+    
+    # Inference
+    with torch.no_grad():
+        outputs = model(img_tensor)
+        probabilities = F.softmax(outputs, dim=1) # Convert logits to %
+        
+    # Get Results
+    confidence, predicted_class = torch.max(probabilities, 1)
+    return predicted_class.item(), confidence.item(), probabilities[0].tolist()
 
-    with st.spinner("Computing STFT and Mel-Scale conversion..."):
-        # The Mathsy Bit:
-        # 1. STFT: Converts signal to complex numbers like magnitude and phase
-        # 2. Abs: We only need the Magnitude so the loudness of the pitch
-        # 3. DB: Convert to Decibels (logarithmic scale for human hearing ).
-        
-        # Calculate Short-Time Fourier Transform
-        D = librosa.stft(y)  
-        
-        # Convert to Mel-Scale (approximates human ear sensitivity)
-        # We map the linear frequencies to Mel bands
-        S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
+# --- USER INTERFACE ---
+col1, col2 = st.columns([1, 2])
 
-        fig2, ax2 = plt.subplots(figsize=(10, 4))
-        # y_axis='log' creates a logarithmic scale for frequency
-        img = librosa.display.specshow(S_db, sr=sr, x_axis='time', y_axis='log', ax=ax2)
-        fig2.colorbar(img, ax=ax2, format="%+2.0f dB")
-        ax2.set_title("Mel-Spectrogram (Frequency Heatmap)")
+with col1:
+    st.subheader("Input Audio")
+    uploaded_file = st.file_uploader("Upload FLAC/WAV", type=["flac", "wav", "mp3"])
+
+    if uploaded_file is not None:
+        st.audio(uploaded_file, format='audio/wav')
         
-        st.pyplot(fig2)
-        
-        st.info("""
-        **Forensic Note:** Deepfake models often struggle with high frequencies. 
-        Look for unnatural 'black voids' or hard cut-offs above 8kHz-10kHz.
+        if st.button("Analyze Spectrogram"):
+            with st.spinner("Generating Spectral Image..."):
+                # 1. Convert Audio to Image
+                spec_image = generate_spectrogram_image(uploaded_file)
+                
+                # 2. Run Inference
+                class_idx, conf, probs = predict(spec_image, model)
+                
+                # 3. Display Results
+                classes = ['Bonafide (Real)', 'Spoof (Fake)']
+                result_color = "green" if class_idx == 0 else "red"
+                
+                st.markdown(f"### Prediction: :{result_color}[{classes[class_idx]}]")
+                st.metric("Confidence", f"{conf*100:.2f}%")
+                
+                # Debug Info
+                with st.expander("See Tensor Details"):
+                    st.write(f"Real Probability: {probs[0]:.4f}")
+                    st.write(f"Fake Probability: {probs[1]:.4f}")
+
+with col2:
+    if uploaded_file is not None and 'spec_image' in locals():
+        st.subheader("Spectral Analysis")
+        st.image(spec_image, caption="Generated Mel-Spectrogram (Input to CNN)", use_container_width=True)
+        st.markdown("""
+        **What is the AI seeing?**
+        * The CNN scans this image for "hard cut-offs" in the high frequencies.
+        * Real human voices fill the spectrum organically.
+        * Synthetic voices often leave 'black voids' or checkerboard artifacts.
         """)
-        
-else:
-    st.info("Waiting for input... Upload a file in the sidebar to begin analysis.")
