@@ -45,22 +45,31 @@ model = load_model()
 def generate_spectrogram_image(audio_buffer):
     
     # Converts audio bytes to Mel Spectrogram to PIL Image
-    # This mimics exactly how we generated the Training Data
+    # Strictly matches the logic in processor.py (Mel-Scale, Power-to-DB)
     
     # Load Audio
-    y, sr = librosa.load(audio_buffer, sr=44100) # Force 44.1kHz
+    # We force 44.1kHz to match our theoretical Nyquist requirement
+    y, sr = librosa.load(audio_buffer, sr=44100)
     
-    # STFT & Mel Scale
-    D = librosa.stft(y)
-    S_db = librosa.amplitude_to_db(np.abs(D), ref=np.max)
+    # Generate MEL Spectrogram (The Fix)
+    # We use melspectrogram instead of stft to match the training data
+    # n_mels=128 ensures the height is exactly 128 pixels
+    mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128)
+    
+    # Power to DB (The Fix)
+    # processor.py uses power_to_db (intensity), not amplitude_to_db
+    mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
     
     # Render to Memory (No Axis, No Labels)
     fig = plt.figure(figsize=(10, 10))
     plt.axis('off')
-    librosa.display.specshow(S_db, sr=sr, x_axis='time', y_axis='mel')
+    
+    # Display the Mel Spectrogram
+    librosa.display.specshow(mel_spec_db, sr=sr, x_axis='time', y_axis='mel')
+    
     plt.tight_layout(pad=0)
     
-    # Save to Buffer (RAM) instead of Disk
+    # Save to Buffer
     buf = io.BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
     plt.close(fig)
@@ -69,9 +78,9 @@ def generate_spectrogram_image(audio_buffer):
     return Image.open(buf)
 
 def predict(image, model):
-    """
-    Passes the image through the Neural Network.
-    """
+    
+    # Passes the image through the Neural Network.
+    
     # Same transforms as train.py
     transform_pipeline = transforms.Compose([
         transforms.Resize((128, 128)),
