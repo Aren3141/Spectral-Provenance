@@ -86,3 +86,11 @@ This script handles the mass-transmutation of the ASVspoof 2019 dataset.
 * **Loss Function:** CrossEntropyLoss.
 * **Input Constraint:** All images resized to **128x128** Grayscale.
 * **Dynamics:** Rapid convergence suggests high separability between real and spoofed audio in the frequency domain.
+
+### 5. Critical Preprocessing Standards (The "Recipe")
+To ensure inference matches training, all inputs **must** follow this strict protocol:
+1.  **Sample Rate:** Force `sr=44100` (Nyquist adherence).
+2.  **Spectrogram Type:** Mel-Spectrogram (`n_mels=128`, `n_fft=2048`, `hop_length=512`).
+3.  **Decibel Conversion:** `librosa.amplitude_to_db(ref=np.max)` (Note: Uses Amplitude, not Power).
+4.  **Image Rendering:** Matplotlib `figsize=(4, 4)` with `plt.axis('off')`.
+5.  **Normalization:** Resize final output to `128x128` pixels before CNN ingestion.

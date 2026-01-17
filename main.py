@@ -43,33 +43,40 @@ model = load_model()
 
 # PREPROCESSING PIPELINE
 def generate_spectrogram_image(audio_buffer):
-    
-    # Converts audio bytes to Mel Spectrogram to PIL Image
-    # Strictly matches the logic in processor.py (Mel-Scale, Power-to-DB)
-    
-    # Load Audio
-    # We force 44.1kHz to match our theoretical Nyquist requirement
+    """
+    Converts audio bytes -> Mel Spectrogram -> PIL Image
+    Strictly matches the logic in processor.py
+    """
+    # 1. Load Audio
+    # Match the sample rate from processor.py
     y, sr = librosa.load(audio_buffer, sr=44100)
     
-    # Generate MEL Spectrogram (The Fix)
-    # We use melspectrogram instead of stft to match the training data
-    # n_mels=128 ensures the height is exactly 128 pixels
-    mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128)
+    # 2. Generate MEL Spectrogram
+    # processor.py uses default n_fft=2048 and hop_length=512
+    # We must match these parameters exactly.
+    mel_spec = librosa.feature.melspectrogram(
+        y=y, 
+        sr=sr, 
+        n_fft=2048, 
+        hop_length=512
+    )
     
-    # Power to DB (The Fix)
-    # processor.py uses power_to_db (intensity), not amplitude_to_db
-    mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)
+    # 3. Convert to DB (The Critical Fix)
+    # processor.py uses amplitude_to_db, not power_to_db.
+    # We must copy this exactly, even if power_to_db is more standard.
+    mel_spec_db = librosa.amplitude_to_db(mel_spec, ref=np.max)
     
-    # Render to Memory (No Axis, No Labels)
-    fig = plt.figure(figsize=(10, 10))
+    # 4. Render to Memory
+    # Match processor.py figsize=(4, 4) to get the same line thickness
+    fig = plt.figure(figsize=(4, 4)) 
     plt.axis('off')
     
-    # Display the Mel Spectrogram
-    librosa.display.specshow(mel_spec_db, sr=sr, x_axis='time', y_axis='mel')
+    # Display
+    librosa.display.specshow(mel_spec_db, sr=sr, hop_length=512, x_axis='time', y_axis='mel')
     
     plt.tight_layout(pad=0)
     
-    # Save to Buffer
+    # 5. Save to Buffer
     buf = io.BytesIO()
     plt.savefig(buf, format='png', bbox_inches='tight', pad_inches=0)
     plt.close(fig)
