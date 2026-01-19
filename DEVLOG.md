@@ -76,7 +76,7 @@
 ## Entry 8: The Pipeline Synchronization (Jan 17, 2026)
 **Status:** Phase 5 (Interface Debugging)
 - **Issue:** Initial deployment showed high accuracy on test set but flagged valid training files as "Spoof".
-- **Root Cause Analysis:** Discovered a "Twin Paradox" between `processor.py` (Training) and `main.py` (Inference).
+- **Root Cause Analysis:** Discovered a mismatch between `processor.py` (Training) and `main.py` (Inference).
     - **Math Mismatch:** Processor used `amplitude_to_db` (incorrect physics but consistent), Main used `power_to_db`.
     - **Resolution Mismatch:** Processor generated small plots (4x4 inches), Main generated large plots (10x10 inches). Resizing these to 128px created different line thicknesses.
 - **The Fix:** Rewrote `main.py` image generation to strictly mimic `processor.py` artifacts (figsize=4x4, amplitude_to_db).
