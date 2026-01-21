@@ -51,10 +51,10 @@ model = load_model()
 # FIX: Cut-offs no longer considered when below 50% of the audio file.
 
 def process_audio_segments(audio_file):
-    """
-    Takes a raw audio file, chops it into 4s segments.
-    FILTERS: Discards segments with <50% valid audio (unless it's the only segment).
-    """
+    
+    # Takes a raw audio file, chops it into 4s segments.
+    # FILTERS: Discards segments with <50% valid audio (unless it's the only segment).
+    
     # Load audio
     y, sr = librosa.load(audio_file, sr=SAMPLE_RATE)
     
