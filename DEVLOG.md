@@ -85,3 +85,16 @@
     - Validated with Training File B: **64% Spoof Confidence** (Outlier due to time-compression distortion).
     - Validated with Live Mic: **Spoof** (Confirmed Domain Shift hypothesis).
 - **Conclusion:** The system is operational. The "AI Detection" is highly sensitive to acoustic environments such as room reverb.
+
+## Entry 10: The Sliding Window & The Padding Fix (Jan 21, 2026)
+**Status:** Phase 3 Complete (Segmentation)
+- **Problem:**
+    1.  The model (v2) was failing on the "tail ends" of files (e.g., a 5s file had a 1s tail that was mostly padding).
+    2.  The model classified this padding (silence) as "Spoof" due to artificial spectral cut-offs.
+- **Solution:**
+    - Implemented **Minimum Validity Check**: Any segment with <50% real audio is discarded (unless it is the only segment).
+    - Implemented **Sliding Window Inference** in `main.py`.
+- **Result:**
+    - Dataset Bonafide Files: **100% Correct Identification.**
+    - Live Voice: **Classified as Spoof** (Domain Shift confirmed: Room Echo/Noise != Studio Silence).
+- **Next Step:** Evaluation Phase (Confusion Matrix) and potentially Data Augmentation.
