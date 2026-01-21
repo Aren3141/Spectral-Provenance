@@ -5,101 +5,94 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 import time
 import os
-from model import SpectrogramCNN
+# We import the model structure you already have
+from model import SpectrogramCNN 
 
 # --- CONFIGURATION ---
-BATCH_SIZE = 32         # How many images we process at once
-LEARNING_RATE = 0.001   # How big our steps "down the hill" are
-EPOCHS = 10             # How many times we show the entire dataset to the model
-DATA_PATH = "data/processed" # Where your images are
+BATCH_SIZE = 64         # Increased to 64 for M3 efficiency (speeds up training)
+LEARNING_RATE = 0.001   
+EPOCHS = 10             
+DATA_PATH = "data/processed" 
+MODEL_SAVE_PATH = "models/spectral_cnn_v2.pth" # Saving as V2
 
 def train():
     # 1. SETUP DEVICE
-    # We prioritize Apple Silicon (MPS) for your M3 Air, then CUDA, then CPU.
     if torch.backends.mps.is_available():
         device = torch.device("mps")
-        print(">>> Using Apple MPS Acceleration.")
-    elif torch.cuda.is_available():
-        device = torch.device("cuda")
-        print(">>> Using CUDA Acceleration.")
+        print(">>> [SYSTEM] Apple M3 MPS Acceleration Engaged.")
     else:
         device = torch.device("cpu")
-        print(">>> Using CPU (Warning: Slow).")
+        print(">>> [SYSTEM] Using CPU (Warning: Slower).")
 
     # 2. DATA PREPARATION
-    # We convert the images to Tensors (Numbers) AND resize them.
+    # transformation must match processor.py output (Grayscale)
     transform = transforms.Compose([
-        transforms.Resize((128, 128)),               #  ADD THIS LINE
-        transforms.Grayscale(num_output_channels=1), # Ensure it is 1 channel
+        transforms.Resize((128, 128)),               
+        transforms.Grayscale(num_output_channels=1), 
         transforms.ToTensor()
     ])
 
-    # ImageFolder automatically labels data based on folder names (bonafide vs spoof)
-    print(">>> Loading Dataset...")
+    print(f">>> [DATA] Loading Dataset from {DATA_PATH}...")
+    
+    # Check if data exists first
+    if not os.path.exists(DATA_PATH):
+        print(f"[ERROR] {DATA_PATH} does not exist. Did processor.py finish?")
+        return
+
     train_dataset = datasets.ImageFolder(root=DATA_PATH, transform=transform)
     
-    # The DataLoader shuffles the data and feeds it to the model in batches
+    # We shuffle to prevent the model from learning the order of files
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
     
-    print(f"    Found {len(train_dataset)} images.")
-    print(f"    Classes: {train_dataset.classes}") # Should be ['bonafide', 'spoof']
+    print(f">>> [DATA] Loaded {len(train_dataset)} segments.")
+    print(f">>> [DATA] Classes detected: {train_dataset.classes}")
 
-    # 3. INITIALIZE THE BRAIN
+    # 3. INITIALIZE MODEL
     model = SpectrogramCNN().to(device)
-    
-    # 4. MATH SETUP
-    criterion = nn.CrossEntropyLoss()      # The Error Calculator
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE) # The Learner
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    # 5. THE TRAINING LOOP
-    print("\n>>> Starting Training...")
+    # 4. TRAINING LOOP
+    print(f">>> [TRAINING] Beginning {EPOCHS} Epochs on M3 Neural Engine...")
     
     for epoch in range(EPOCHS):
+        start_time = time.time()
         running_loss = 0.0
         correct_predictions = 0
         total_predictions = 0
-        start_time = time.time()
+        
+        model.train() # Set model to training mode (enables Dropout)
 
         for i, (images, labels) in enumerate(train_loader):
-            # Move data to the M3 Chip
             images, labels = images.to(device), labels.to(device)
 
-            # Zero the gradients (reset calculus from previous step)
-            optimizer.zero_grad()
+            optimizer.zero_grad()           # Reset gradients
+            outputs = model(images)         # Forward pass
+            loss = criterion(outputs, labels) # Calculate error
+            loss.backward()                 # Backward pass (Calculus)
+            optimizer.step()                # Update weights
 
-            # Forward Pass: Ask the model to guess
-            outputs = model(images)
-
-            # Calculate Loss: How wrong was it?
-            loss = criterion(outputs, labels)
-
-            # Backward Pass: Calculate calculus gradients (Backpropagation)
-            loss.backward()
-
-            # Optimize: Adjust weights
-            optimizer.step()
-
-            # Statistics
             running_loss += loss.item()
             _, predicted = torch.max(outputs.data, 1)
             total_predictions += labels.size(0)
             correct_predictions += (predicted == labels).sum().item()
 
-        # End of Epoch Stats
+        # Statistics per Epoch
         epoch_acc = (correct_predictions / total_predictions) * 100
         epoch_time = time.time() - start_time
+        
         print(f"Epoch [{epoch+1}/{EPOCHS}] "
               f"Loss: {running_loss/len(train_loader):.4f} | "
               f"Accuracy: {epoch_acc:.2f}% | "
               f"Time: {epoch_time:.2f}s")
 
-    # 6. SAVE THE BRAIN
-    print("\n>>> Training Complete.")
+    # 5. SAVE
+    print("\n>>> [COMPLETE] Training Finished.")
     if not os.path.exists("models"):
         os.makedirs("models")
     
-    torch.save(model.state_dict(), "models/spectral_cnn_v1.pth")
-    print(">>> Model saved to models/spectral_cnn_v1.pth")
+    torch.save(model.state_dict(), MODEL_SAVE_PATH)
+    print(f">>> [SAVED] Model saved to {MODEL_SAVE_PATH}")
 
 if __name__ == "__main__":
     train()
