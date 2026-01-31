@@ -94,3 +94,20 @@ To ensure inference matches training, all inputs **must** follow this strict pro
 3.  **Decibel Conversion:** `librosa.amplitude_to_db(ref=np.max)` (Note: Uses Amplitude, not Power).
 4.  **Image Rendering:** Matplotlib `figsize=(4, 4)` with `plt.axis('off')`.
 5.  **Normalization:** Resize final output to `128x128` pixels before CNN ingestion.
+
+## 6. The Data Pipeline (Phase 3 NEW: Segmentation)
+
+**Update (Jan 2026):** We discovered that processing whole files introduced padding artifacts. We have shifted to a **Sliding Window** approach.
+
+### The Segmentation Protocol
+* **Atom Size:** 4.0 Seconds (`SAMPLES_PER_SEGMENT = 176,400`).
+* **Overlap:** None (currently hard-sliced).
+* **The "Minimum Validity" Rule:**
+    * During inference, any segment containing <50% valid audio (mostly silence/padding) is discarded, *unless* it is the only segment in the file.
+    * **Reason:** The model previously classified digital silence as "Spoof". By enforcing a validity ratio, we ensure the CNN only sees active signal.
+
+### Critical Preprocessing Standards 
+1.  **Sample Rate:** Force `sr=44100`.
+2.  **Spectrogram:** Mel-Spectrogram (`n_mels=128`, `n_fft=2048`, `hop_length=512`).
+3.  **Ref:** `np.max` (Amplitude to DB).
+4.  **Dimensions:** 128x128 pixels (Grayscale).
