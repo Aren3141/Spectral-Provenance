@@ -98,3 +98,23 @@
     - Dataset Bonafide Files: **100% Correct Identification.**
     - Live Voice: **Classified as Spoof** (Domain Shift confirmed: Room Echo/Noise != Studio Silence).
 - **Next Step:** Evaluation Phase (Confusion Matrix) and potentially Data Augmentation.
+
+## Entry 11: The Generalization Problem (Jan 24, 2026)
+**Status:** Phase 4 (Robustness Checks)
+- **Critical Failure:** While Model V2 achieved ~99% accuracy on the test set, it failed consistently on live inference.
+    - *Observation:* Clean/Quiet user audio was flagged as "Spoof" (99.5% confidence).
+    - *Hypothesis:* The model has overfitted to the specific acoustic signature (digital silence) of the ASVspoof recording studio.
+- **Attempted Fix 1 (Noise Injection):** Trained Model V3 with Gaussian Noise.
+    - *Result:* Improved robustness against cafe noise, but failed to fix the "Quiet Room" false positive.
+
+## Entry 12: The Reset (Jan 26, 2026)
+**Status:** Phase 4.5 (The Reset)
+- **The Discovery:** A forensic comparison of "Bonafide" training data vs. "Live" user data revealed a fatal flaw in our initial assumptions.
+    - **The Artifact:** Training data (native 16kHz) upsampled to 44.1kHz contained a massive "Black Void" (Digital Zero) above 8kHz.
+    - **The Conflict:** Modern microphones (native 44.1kHz) capture analog noise in this region.
+    - **The Failure Mode:** The CNN learned that *any* signal above 8kHz is an anomaly. Since the training set had *zero* signal there, it classified real-world high-fidelity audio as "Fake."
+- **The Pivot:** We cannot "filter" analog noise to match digital zeros. We must align the physics engine.
+- **Decision:** **The 16kHz Reset.**
+    - Downgrade the entire pipeline to **16,000 Hz**.
+    - This forces the user's high-fidelity audio to be downsampled, mathematically destroying the problematic high-frequency noise and aligning it perfectly with the training distribution.
+- **Action Item:** Rewrite `processor.py`, `train.py`, and `main.py` to operate at `sr=16000`.

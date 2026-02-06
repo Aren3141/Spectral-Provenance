@@ -5,15 +5,36 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 import time
 import os
-# We import the model structure you already have
+import random
+
+# We import the model structure
 from model import SpectrogramCNN 
 
 # --- CONFIGURATION ---
-BATCH_SIZE = 64         # Increased to 64 for M3 efficiency (speeds up training)
+BATCH_SIZE = 64         
 LEARNING_RATE = 0.001   
-EPOCHS = 10             
+EPOCHS = 15             # Increased to 15 to allow for learning with noise
 DATA_PATH = "data/processed" 
-MODEL_SAVE_PATH = "models/spectral_cnn_v2.pth" # Saving as V2
+MODEL_SAVE_PATH = "models/spectral_cnn_v3.pth" # Saving as V3 (Noise Augmented)
+
+# --- CUSTOM TRANSFORMS ---
+class AddGaussianNoise(object):
+    """
+    Injects random Gaussian noise into the tensor to simulate 
+    imperfect recording conditions (room tone, mic hiss).
+    This forces the model to ignore background 'silence' as a feature.
+    """
+    def __init__(self, mean=0., std=1.):
+        self.std = std
+        self.mean = mean
+        
+    def __call__(self, tensor):
+        # Generate noise matching the tensor shape
+        noise = torch.randn(tensor.size()) * self.std + self.mean
+        return tensor + noise
+    
+    def __repr__(self):
+        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
 def train():
     # 1. SETUP DEVICE
@@ -24,17 +45,23 @@ def train():
         device = torch.device("cpu")
         print(">>> [SYSTEM] Using CPU (Warning: Slower).")
 
-    # 2. DATA PREPARATION
-    # transformation must match processor.py output (Grayscale)
+    # 2. DATA PREPARATION (WITH AUGMENTATION)
+    print(">>> [DATA] Initializing Augmentation Pipeline...")
+    
+    # We define the transformation pipeline
     transform = transforms.Compose([
         transforms.Resize((128, 128)),               
         transforms.Grayscale(num_output_channels=1), 
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        
+        # --- ROBUSTNESS INJECTION ---
+        # Apply Gaussian Noise to 50% of images. 
+        # std=0.05 represents a ~5% noise floor.
+        transforms.RandomApply([AddGaussianNoise(0., 0.05)], p=0.5),
     ])
 
     print(f">>> [DATA] Loading Dataset from {DATA_PATH}...")
     
-    # Check if data exists first
     if not os.path.exists(DATA_PATH):
         print(f"[ERROR] {DATA_PATH} does not exist. Did processor.py finish?")
         return
@@ -54,6 +81,7 @@ def train():
 
     # 4. TRAINING LOOP
     print(f">>> [TRAINING] Beginning {EPOCHS} Epochs on M3 Neural Engine...")
+    print(f">>> [NOTE] Noise Augmentation is ACTIVE (p=0.5).")
     
     for epoch in range(EPOCHS):
         start_time = time.time()

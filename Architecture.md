@@ -8,18 +8,19 @@ This module handles the physical ingestion of audio files and mapping the freque
 * **`numpy`**: The maths backend. Audio in this project is treated as a 1D Tensor (Vector) where $y[t]$ is the amplitude at time $t$.
 * **`streamlit`**: The Interface layer. It allows us to separate backend from frontend without having to write complex JavaScript.
 
-## 2. Key Decisions in `main.py`
+## 2. Key Decisions in `main.py` (UPDATED JAN 2026)
 
-### `sr=44100` (Sampling Rate)
-* **Code:** `y, sr = librosa.load(..., sr=44100)`
-* **Why:** We use the standard CD-quality sampling rate to stick to the **Nyquist-Shannon Sampling Theorem**.
-    * To verify deepfake artifacts at **16kHz**, we need a sampling rate of at least $32kHz$.
-    * Our previous sprint used 22.05kHz, which capped our visibility at ~11kHz. By doubling this to 44.1kHz, we extend our range of visibility up to **22.05kHz**, covering the entire spectrum of human hearing and critical high-frequency generation errors.
+### `sr=16000` (The Native Resolution Standard)
+* **Code:** `y, sr = librosa.load(..., sr=16000)`
+* **The Logic Change:**
+    * *Previous Hypothesis:* We initially upsampled to 44.1kHz to catch high-frequency artifacts.
+    * *The Correction:* We discovered that the ASVspoof dataset is natively 16kHz. Upsampling created a "Phantom Zone" (Frequency > 8kHz) filled with pure digital zeros.
+    * *The Fix:* By locking the system to **16kHz**, we ensure that high-fidelity user microphones are downsampled. This prevents the model from mistaking "Analog Room Tone" for "Generative Artifacts."
+* **Nyquist Limit:** This caps our visible spectrum at **8kHz**, which covers the core of human speech and the primary bands where current Deepfake models struggle with phase coherence.
 
 ### The Waveform (Time-Domain)
 * **Code:** `librosa.display.waveshow(...)`
-* **Why:** This visualizes **Amplitude vs. Time**.
-* **Utility:** Useful for checking file integrity and silence, but not enough to check for spoofing as it lacks frequency measure.
+* **Utility:** Used strictly for amplitude validity checks (e.g., detecting empty files).
 
 ## 3. Frequency-Domain Analysis (Phase 1.5)
 
@@ -87,13 +88,18 @@ This script handles the mass-transmutation of the ASVspoof 2019 dataset.
 * **Input Constraint:** All images resized to **128x128** Grayscale.
 * **Dynamics:** Rapid convergence suggests high separability between real and spoofed audio in the frequency domain.
 
-### 5. Critical Preprocessing Standards (The "Recipe")
-To ensure inference matches training, all inputs **must** follow this strict protocol:
-1.  **Sample Rate:** Force `sr=44100` (Nyquist adherence).
-2.  **Spectrogram Type:** Mel-Spectrogram (`n_mels=128`, `n_fft=2048`, `hop_length=512`).
-3.  **Decibel Conversion:** `librosa.amplitude_to_db(ref=np.max)` (Note: Uses Amplitude, not Power).
+## 5. Critical Preprocessing Standards (The "Recipe" v2)
+To ensure inference matches training, all inputs **must** follow this strict protocol.
+**Note:** These constants were revised in Phase 4.5 to fix the issue.
+
+1.  **Sample Rate:** Force `sr=16000` (Matches ASVspoof Native).
+2.  **Spectrogram Type:** Mel-Spectrogram.
+    * `n_mels=128`
+    * `n_fft=1024` (Reduced from 2048 to maintain time-resolution at lower SR).
+    * `hop_length=256` (Reduced from 512).
+3.  **Decibel Conversion:** `librosa.amplitude_to_db(ref=np.max)`.
 4.  **Image Rendering:** Matplotlib `figsize=(4, 4)` with `plt.axis('off')`.
-5.  **Normalization:** Resize final output to `128x128` pixels before CNN ingestion.
+5.  **Normalization:** Resize final output to `128x128` pixels (Grayscale).
 
 ## 6. The Data Pipeline (Phase 3 NEW: Segmentation)
 

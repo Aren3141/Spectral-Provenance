@@ -22,11 +22,13 @@ Voice cloning is no longer a theoretical threat; it is an active vector for soci
 * **Interface:** Streamlit
 
 ## 5. Roadmap
-- [ ] **Phase 1:** Audio ingestion pipeline & Spectrogram visualization (The Maths).
-- [ ] **Phase 2:** Model architecture & training loop setup (The Logic).
-- [ ] **Phase 3:** Training on ASVspoof/LJSpeech datasets (The Optimization). Potentially can be changed later.
-- [ ] **Phase 4:** Inference engine & Streamlit Web UI (The Product).
-
+- [x] **Phase 1:** Audio ingestion pipeline & Spectrogram visualization (The Maths).
+- [x] **Phase 2:** Model architecture & training loop setup (The Logic).
+- [x] **Phase 3:** Training on ASVspoof (The Optimization).
+- [ ] **Phase 4:** **Generalization & Physics Alignment.**
+    - *Current State:* Addressing "Domain Shift" between Studio Data and Real-World Microphones.
+    - *Action:* Implementing a "Native 16kHz" pipeline to eliminate high-frequency mismatches.
+- [ ] **Phase 5:** Inference engine & Streamlit Web UI (The Product).
 ---
 *Author: [Aren Koprulu]*
 
